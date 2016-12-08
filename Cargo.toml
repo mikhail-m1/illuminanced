@@ -1,0 +1,13 @@
+[package]
+name = "illuminanced"
+version = "0.1.0"
+authors = ["Mikhail Modin <mikhailm1@gmail.com>"]
+
+[dependencies]
+daemonize = { git = "http://github.com/mikhail-m1/daemonize.git" }
+#daemonize = { path = "../daemonize" }
+syslog = "3.2"
+log = "0.3"
+simplelog ="0.4"
+getopts = "0.2"
+toml="0.2"
