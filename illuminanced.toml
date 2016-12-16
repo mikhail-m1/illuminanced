@@ -13,6 +13,8 @@ step_barrier = 0.1
 max_backlight_file = "/sys/class/backlight/intel_backlight/max_brightness"
 backlight_file = "/sys/class/backlight/intel_backlight/brightness"
 illuminance_file = "/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw"
+event_device_mask = "/dev/input/event*"
+event_device_name = "Asus WMI hotkeys"
 
 [kalman]
 q = 1

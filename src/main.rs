@@ -3,6 +3,8 @@ extern crate syslog;
 extern crate simplelog;
 extern crate getopts;
 extern crate toml;
+extern crate glob;
+extern crate libc;
 #[macro_use]
 extern crate log;
 
@@ -19,6 +21,7 @@ use std::env;
 mod kalman;
 mod config;
 mod discrete_value;
+mod switch_monitor;
 
 #[derive(Debug)]
 struct LightConvertor {
@@ -96,7 +99,8 @@ fn write_u32_to_file(filename: &str, value: u32) -> std::io::Result<()> {
 
 fn main_loop(config: &Config,
              light_convertor: &LightConvertor,
-             max_brightness: u32)
+             max_brightness: u32,
+             mut switch_monitor: switch_monitor::SwitchMonitor)
              -> Result<(), ErrorCode> {
     let mut kalman = Kalman::new(config.kalman_q(),
                                  config.kalman_r(),
@@ -125,7 +129,12 @@ fn main_loop(config: &Config,
             }
             _ => error!("Cannot read illuminance"),
         }
-        std::thread::sleep(std::time::Duration::from_secs(config.check_period_in_seconds()));
+        if switch_monitor.try_receive_event(config.check_period_in_seconds()) {
+            info!("disabled by event, wait for enabling");
+            while !switch_monitor.try_receive_event(60 * 60) {
+            }
+            info!("enabled by event");
+        }
     }
 }
 
@@ -261,6 +270,9 @@ fn run() -> Result<(), ErrorCode> {
     write_u32_to_file(config.backlight_filename(), brightness)
         .map_err(|_| ErrorCode::CannotSetBacklight)?;
 
+    let switch_monitor = switch_monitor::SwitchMonitor::new(config.event_device_mask(),
+                                                            config.event_device_name());
+
     if !matches.opt_present("no-fork") {
         Daemonize::new().pid_file(config.pid_filename())
             .start()
@@ -270,7 +282,7 @@ fn run() -> Result<(), ErrorCode> {
             })?;
     }
 
-    main_loop(&config, &light_convertor, max_brightness)
+    main_loop(&config, &light_convertor, max_brightness, switch_monitor)
 }
 
 fn main() {

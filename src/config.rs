@@ -47,6 +47,14 @@ impl Config {
         self.get_u32("general", "check_period_in_seconds").unwrap_or(1) as u64
     }
 
+    pub fn event_device_name(&self) -> &str {
+        self.get_str("general", "event_device_name").unwrap_or("/dev/input/event/*")
+    }
+
+    pub fn event_device_mask(&self) -> &str {
+        self.get_str("general", "event_device_mask").unwrap_or("Asus WMI hotkeys")
+    }
+
     pub fn kalman_q(&self) -> f32 {
         self.get_f32("kalman", "q").unwrap_or(1.0)
     }
