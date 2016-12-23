@@ -15,7 +15,7 @@ Tested on ASUS UX305L Ubuntu 16.04 without additional divers.
 ## How it works
 Reads illuminance from `/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw`, apply Kalman like filter, set backlight value base on defined points.
 Unfortunately I cannot find a way how get events from [iio buffers](https://www.kernel.org/doc/htmldocs/iio/iiobuffer.html), for acpi-als driver, so now it polls.
-Support <Fn> + A
+Support `<Fn> + A`
 
 ## To Do
 - keep fd's open & change user
