@@ -7,11 +7,18 @@ use std;
 
 pub struct SwitchMonitor {
     fd: Option<fs::File>,
+    state: State,
+}
+
+#[derive(Debug,Clone,Copy)]
+pub enum State {
+    Auto,
+    Maximum,
+    Off
 }
 
 impl SwitchMonitor {
     pub fn new(dev_mask: &str, dev_name: &str) -> Self {
-        debug!("!!!! open");
         match glob(dev_mask) {
             Err(e) => error!("Cannot glob({}): {}", dev_mask, e),
             Ok(dir) => {
@@ -35,7 +42,7 @@ impl SwitchMonitor {
                                         debug!("found input device {:?} `{}`", item, name);
                                         if name.starts_with(dev_name) {
                                             debug!("use {:?} `{}`", item, name);
-                                            return SwitchMonitor { fd: Some(fd) };
+                                            return SwitchMonitor { fd: Some(fd), state: State::Auto };
                                         }
                                     }
                                 }
@@ -45,13 +52,13 @@ impl SwitchMonitor {
                 }
             }
         }
-        SwitchMonitor { fd: None }
+        SwitchMonitor { fd: None, state: State::Auto }
     }
 
-    pub fn try_receive_event(&mut self, timeout: u64) -> bool {
+    pub fn wait_state_update(&mut self, timeout: u64) -> (State, bool) {
         if self.fd.is_none() {
             std::thread::sleep(std::time::Duration::from_secs(timeout));
-            return false;
+            return (self.state, false);
         }
         let mut fd = self.fd.as_ref().unwrap();
 
@@ -73,7 +80,7 @@ impl SwitchMonitor {
             error!("Cannot select on event fd: {}", io::Error::last_os_error());
         }
         if rc != 1 {
-            return false;
+            return (self.state, false);
         }
 
         #[repr(C)]
@@ -93,11 +100,19 @@ impl SwitchMonitor {
             let mut u: &mut [u8; SIZE] = mem::transmute(&mut event);
             if let Err(e) = fd.read_exact(u) {
                 error!("Cannot read from event device: {}", e);
-                return false;
+                return (self.state, false);
             }
             event
         };
         debug!("input event received: {:?}", event);
-        event.event_type == 1 /*KEY*/ && event.code == 0x230/*KEY_ALS_TOGGLE*/ && event.value == 1
+        if event.event_type == 1 /*KEY*/ && event.code == 0x230/*KEY_ALS_TOGGLE*/ && event.value == 1 {
+            self.state = match self.state {
+                State::Auto => State::Off,
+                State::Off => State::Maximum,
+                State::Maximum => State::Auto,
+            };
+            return (self.state, true)
+        }
+        (self.state, false)
     }
 }

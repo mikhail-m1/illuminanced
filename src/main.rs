@@ -117,23 +117,51 @@ fn main_loop(config: &Config,
                 let brightness = light_convertor.get_light(illuminance_k as u32);
                 debug!("{}, {}, {}", illuminance, illuminance_k, brightness);
                 if let Some(new) = stepped_brightness.update(brightness) {
-                    info!("row {}, kalman {}, new level {} new brightness {}",
+                    info!("raw {}, kalman {}, new level {} new brightness {}",
                           illuminance,
                           illuminance_k,
                           brightness,
                           new);
-                    if let Err(e) = write_u32_to_file(config.backlight_filename(), new) {
-                        error!("Cannot set brightness: {}", e);
-                    }
+                    set_brightness(config, new);
                 }
             }
             _ => error!("Cannot read illuminance"),
         }
-        if switch_monitor.try_receive_event(config.check_period_in_seconds()) {
-            info!("disabled by event, wait for enabling");
-            while !switch_monitor.try_receive_event(60 * 60) {
+        if try_process_switch(&mut switch_monitor, &config, max_brightness) {
+            stepped_brightness.update(config.light_steps() as f32);
+        }
+    }
+}
+
+fn set_brightness(config: &Config, value: u32) {
+    if let Err(e) = write_u32_to_file(config.backlight_filename(), value) {
+        error!("Cannot set brightness: {}", e);
+    }
+}
+
+fn try_process_switch(switch_monitor: &mut switch_monitor::SwitchMonitor, config: &Config, max_brightness: u32) -> bool {
+    let mut timeout = config.check_period_in_seconds();
+    loop {
+        match switch_monitor.wait_state_update(timeout) {
+            (switch_monitor::State::Off, changed) => {
+                if changed {
+                    info!("disabled by event, wait for enabling");
+                }
+                timeout = 3600;
+            },
+            (switch_monitor::State::Auto, changed) => {
+                if changed {
+                    info!("auto mode by event");
+                }
+                return changed;
+            },
+            (switch_monitor::State::Maximum, changed) => {
+                if changed {
+                    info!("maximum by event");
+                }
+                set_brightness(config, max_brightness);
+                timeout = 3600;
             }
-            info!("enabled by event");
         }
     }
 }
