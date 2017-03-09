@@ -1,5 +1,5 @@
 # Ambient Light Sensor Daemon For Linux
-Tested on ASUS UX305L Ubuntu 16.04 with build in driver acpi-als.
+Tested on ASUS Zenbook UX305L Ubuntu 16.04 with build in driver acpi-als.
 
 ## How to build & install
 * install Rust: `curl https://sh.rustup.rs -sSf | sh`
