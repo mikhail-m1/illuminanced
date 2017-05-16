@@ -7,6 +7,8 @@ Tested on ASUS Zenbook UX305L Ubuntu 16.04 with build in driver acpi-als.
 * build: `cd illuminanced; cargo build --release`
 * install `sudo ./install.sh`
 
+please fill [response form](https://drive.google.com/open?id=1mjr_R3nXBFAeObI7zB7BPD_EpSvTTpOf_H67x-HE2qo)
+
 ## How to Adjust
 * choose how many light values do you need by `[general].light_steps`
 * set defined points count by `[light].points_count`
