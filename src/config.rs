@@ -55,6 +55,10 @@ impl Config {
         self.get_str("general", "event_device_mask").unwrap_or("Asus WMI hotkeys")
     }
 
+    pub fn is_max_brightness_mode(&self) -> bool {
+        self.get_bool("general", "enable_max_brightness_mode").unwrap_or(true)
+    }
+
     pub fn kalman_q(&self) -> f32 {
         self.get_f32("kalman", "q").unwrap_or(1.0)
     }
@@ -142,5 +146,9 @@ impl Config {
 
     fn get_f32(&self, table_name: &str, name: &str) -> Option<f32> {
         self.get_table_val(table_name, name).and_then(|v| v.as_float()).map(|i| i as f32)
+    }
+
+    fn get_bool(&self, table_name: &str, name: &str) -> Option<bool> {
+        self.get_table_val(table_name, name).and_then(|v| v.as_bool()).map(|i| i as bool)
     }
 }

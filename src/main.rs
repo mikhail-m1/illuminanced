@@ -7,7 +7,6 @@ extern crate glob;
 extern crate libc;
 #[macro_use]
 extern crate log;
-
 use std::io::prelude::*;
 use std::fs::{File, OpenOptions};
 use daemonize::Daemonize;
@@ -299,7 +298,8 @@ fn run() -> Result<(), ErrorCode> {
         .map_err(|_| ErrorCode::CannotSetBacklight)?;
 
     let switch_monitor = switch_monitor::SwitchMonitor::new(config.event_device_mask(),
-                                                            config.event_device_name());
+                                                            config.event_device_name(),
+                                                            config.is_max_brightness_mode());
 
     if !matches.opt_present("no-fork") {
         Daemonize::new().pid_file(config.pid_filename())

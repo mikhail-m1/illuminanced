@@ -8,6 +8,7 @@ use std;
 pub struct SwitchMonitor {
     fd: Option<fs::File>,
     state: State,
+    is_max_brightness_mode_enabled: bool,
 }
 
 #[derive(Debug,Clone,Copy)]
@@ -18,7 +19,7 @@ pub enum State {
 }
 
 impl SwitchMonitor {
-    pub fn new(dev_mask: &str, dev_name: &str) -> Self {
+    pub fn new(dev_mask: &str, dev_name: &str, is_max_brightness_mode_enabled: bool) -> Self {
         match glob(dev_mask) {
             Err(e) => error!("Cannot glob({}): {}", dev_mask, e),
             Ok(dir) => {
@@ -42,7 +43,7 @@ impl SwitchMonitor {
                                         debug!("found input device {:?} `{}`", item, name);
                                         if name.starts_with(dev_name) {
                                             debug!("use {:?} `{}`", item, name);
-                                            return SwitchMonitor { fd: Some(fd), state: State::Auto };
+                                            return SwitchMonitor { fd: Some(fd), state: State::Auto, is_max_brightness_mode_enabled };
                                         }
                                     }
                                 }
@@ -52,7 +53,7 @@ impl SwitchMonitor {
                 }
             }
         }
-        SwitchMonitor { fd: None, state: State::Auto }
+        SwitchMonitor { fd: None, state: State::Auto, is_max_brightness_mode_enabled }
     }
 
     pub fn wait_state_update(&mut self, timeout: u64) -> (State, bool) {
@@ -106,10 +107,11 @@ impl SwitchMonitor {
         };
         debug!("input event received: {:?}", event);
         if event.event_type == 1 /*KEY*/ && event.code == 0x230/*KEY_ALS_TOGGLE*/ && event.value == 1 {
-            self.state = match self.state {
-                State::Auto => State::Off,
-                State::Off => State::Maximum,
-                State::Maximum => State::Auto,
+            self.state = match (self.state, self.is_max_brightness_mode_enabled) {
+                (State::Auto, _) => State::Off,
+                (State::Off, true) => State::Maximum,
+                (State::Off, false) => State::Auto,
+                (State::Maximum, _) => State::Auto,
             };
             return (self.state, true)
         }
