@@ -2,7 +2,7 @@
 It's user mode daemon for change brightness base on light sensor value, designed for Asus Zenbooks, but may be used for other vendors after some tune.
 
 ## How to test befor install
-Run from command line `sudo watch cat /sys/bus/acpi/devices/ACPI0008\:00/iio\:device0/in_illuminance_raw` and check that number is changing (try close the sensor or add more light). If the number is still the same it means the sensor driver doesn't work. If you see file not found error try to find correct path for `in_illuminance_raw` inside `/sys/bus/acpi/devices/`.
+Run from a terminal `sudo watch cat /sys/bus/acpi/devices/ACPI0008\:00/iio\:device0/in_illuminance_raw` and check that number is changing (try close the sensor or add more light). If the number is still the same it means the sensor driver doesn't work. If you see file not found error try to find correct path for `in_illuminance_raw` inside `/sys/bus/acpi/devices/`.
 
 ## Supported laptops
 
