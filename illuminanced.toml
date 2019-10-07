@@ -16,6 +16,7 @@ illuminance_file = "/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance
 event_device_mask = "/dev/input/event*"
 event_device_name = "Asus WMI hotkeys"
 enable_max_brightness_mode = true
+filename_for_sensor_activation = ""
 
 [kalman]
 q = 1

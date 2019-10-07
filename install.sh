@@ -9,6 +9,14 @@ if [ -e /etc/systemd/system/illuminanced.service ]; then
     echo " Done"
 fi
 
+if [ ! -d $DEST/etc ]; then
+    mkdir $DEST/etc || exit "Cannot create $/DEST/etc"
+fi
+
+if [ ! -d $DEST/sbin ]; then
+    mkdir $DEST/sbin || exit "Cannot create $/DEST/sbin"
+fi
+
 if [ -e $DEST/etc/illuminanced.toml ]; then
     echo "\nBackup old config file:"
     mv -v $DEST/etc/illuminanced.toml $DEST/etc/illuminanced.toml_`date +%y%m%d_%H%M%S`;
