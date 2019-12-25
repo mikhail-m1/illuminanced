@@ -78,7 +78,7 @@ fn read_file_to_u32(filename: &str) -> Option<u32> {
         })
         .ok()
         .and_then(|s| {
-            s.trim_right()
+            s.trim_end()
                 .parse::<u32>()
                 .map_err(|e| format!("Cannot parse {} as integer: {} from `{}`", s, e, filename))
                 .ok()
