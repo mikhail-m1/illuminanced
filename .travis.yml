@@ -1,0 +1,5 @@
+language: rust
+rust: stable
+cache: cargo
+jobs:
+  fast_finish: true
