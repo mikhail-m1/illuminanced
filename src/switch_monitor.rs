@@ -98,7 +98,7 @@ impl SwitchMonitor {
         assert_eq!(SIZE, mem::size_of::<Event>());
         let event = unsafe {
             let mut event: Event = mem::zeroed();
-            let mut u: &mut [u8; SIZE] = mem::transmute(&mut event);
+            let u: &mut [u8; SIZE] = mem::transmute(&mut event);
             if let Err(e) = fd.read_exact(u) {
                 error!("Cannot read from event device: {}", e);
                 return (self.state, false);
