@@ -4,7 +4,7 @@ It's user mode daemon for change brightness base on light sensor value, designed
 ## How to test befor install
 Run from a terminal `sudo watch cat /sys/bus/acpi/devices/ACPI0008\:00/iio\:device0/in_illuminance_raw` and check that number is changing (try close the sensor or add more light). If the number is still the same it means the sensor driver doesn't work. If you see file not found error try to find correct path for `in_illuminance_raw` inside `/sys/bus/acpi/devices/`.
 
-For ZBook 15 G6, and may be others, sensor path is `/sys/bus/iio/devices/iio:device0/in_illuminance_raw`. So try `sudo watch cat /sys/bus/iio/devices/iio:device0/in_illuminance_raw` and chenge the config if it works for you.
+For ZBook 15 G6, and may be others, sensor path is `/sys/bus/iio/devices/iio:device0/in_illuminance_raw`. So try `sudo watch cat /sys/bus/iio/devices/iio:device0/in_illuminance_raw` and change the config if it works for you.
 
 ## Supported laptops
 
