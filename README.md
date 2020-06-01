@@ -23,7 +23,7 @@ Some times works (base on responses)
 * UX430UQ Ubuntu with build in driver acpi-als, an extra ACPI call to enable the sensor `(_SB.PCI1.LPCB.EC0.ALSC)`
 * UX410UQ
 
-Doesn't work on Zenbooks driver issue:
+Doesn't work on Zenbooks because of driver issue:
 * UX303LN
 * UX305UA
 * UX31A
@@ -34,6 +34,22 @@ Something wrong with Arch Linux may be related with syslog, a pull request is ap
 Please fill [a response form](https://drive.google.com/open?id=1mjr_R3nXBFAeObI7zB7BPD_EpSvTTpOf_H67x-HE2qo), it may helps other users
 
 Keyboard back light is not adjust because my laptop doesn't have it. Want to help? Create an issue.
+
+## Install package (experimental)
+
+Finally I found time to create [deb package](https://drive.google.com/file/d/1bGBXRmiMMWeg6JIsV2SuZQ2RPYvezSbE/view)
+
+To install and start run next commands after download:
+```
+sudo dpkg -i ~/Download/illuminanced_1.0-0.deb
+sudo systemctl enable illuminanced.service
+sudo systemctl start illuminanced.service
+```
+
+You can check status by running `systemctl status illuminanced.service`
+
+
+Please open an issue if it doesn't work.
 
 ## How to build & install
 * install Rust: `curl https://sh.rustup.rs -sSf | sh`
