@@ -1,9 +1,9 @@
 use glob::glob;
-use std::os::unix::io::AsRawFd;
-use std::{mem, fs, io};
-use std::io::Read;
 use libc;
 use std;
+use std::io::Read;
+use std::os::unix::io::AsRawFd;
+use std::{fs, io, mem};
 
 pub struct SwitchMonitor {
     fd: Option<fs::File>,
@@ -11,11 +11,11 @@ pub struct SwitchMonitor {
     is_max_brightness_mode_enabled: bool,
 }
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum State {
     Auto,
     Maximum,
-    Off
+    Off,
 }
 
 impl SwitchMonitor {
@@ -26,34 +26,42 @@ impl SwitchMonitor {
                 for opt_item in dir {
                     match opt_item {
                         Err(e) => error!("Cannot get path from glob: {}", e),
-                        Ok(item) => {
-                            match fs::File::open(&item) {
-                                Err(e) => error!("Cannot open {}: {}", item.to_string_lossy(), e),
-                                Ok(fd) => {
-                                    let mut buffer = [0u8; 256];
-                                    let rc = unsafe {
-                                        libc::ioctl(fd.as_raw_fd(), 0x8_100_45_06, &mut buffer)
-                                    };
-                                    if rc == -1 {
-                                        error!("Cannot get device name for {}: errno {}",
-                                               item.to_string_lossy(),
-                                               io::Error::last_os_error());
-                                    } else {
-                                        let name = String::from_utf8_lossy(&buffer[0..rc as usize]);
-                                        debug!("found input device {:?} `{}`", item, name);
-                                        if name.starts_with(dev_name) {
-                                            debug!("use {:?} `{}`", item, name);
-                                            return SwitchMonitor { fd: Some(fd), state: State::Auto, is_max_brightness_mode_enabled };
-                                        }
+                        Ok(item) => match fs::File::open(&item) {
+                            Err(e) => error!("Cannot open {}: {}", item.to_string_lossy(), e),
+                            Ok(fd) => {
+                                let mut buffer = [0u8; 256];
+                                let rc = unsafe {
+                                    libc::ioctl(fd.as_raw_fd(), 0x8_100_45_06, &mut buffer)
+                                };
+                                if rc == -1 {
+                                    error!(
+                                        "Cannot get device name for {}: errno {}",
+                                        item.to_string_lossy(),
+                                        io::Error::last_os_error()
+                                    );
+                                } else {
+                                    let name = String::from_utf8_lossy(&buffer[0..rc as usize]);
+                                    debug!("found input device {:?} `{}`", item, name);
+                                    if name.starts_with(dev_name) {
+                                        debug!("use {:?} `{}`", item, name);
+                                        return SwitchMonitor {
+                                            fd: Some(fd),
+                                            state: State::Auto,
+                                            is_max_brightness_mode_enabled,
+                                        };
                                     }
                                 }
                             }
-                        }
+                        },
                     }
                 }
             }
         }
-        SwitchMonitor { fd: None, state: State::Auto, is_max_brightness_mode_enabled }
+        SwitchMonitor {
+            fd: None,
+            state: State::Auto,
+            is_max_brightness_mode_enabled,
+        }
     }
 
     pub fn wait_state_update(&mut self, timeout: u64) -> (State, bool) {
@@ -70,11 +78,13 @@ impl SwitchMonitor {
             let mut timeval: libc::timeval = mem::zeroed();
             timeval.tv_sec = timeout as i64;
             libc::FD_SET(fd.as_raw_fd(), &mut set);
-            libc::select(fd.as_raw_fd() + 1,
-                         &mut set,
-                         null_mut(),
-                         null_mut(),
-                         &mut timeval)
+            libc::select(
+                fd.as_raw_fd() + 1,
+                &mut set,
+                null_mut(),
+                null_mut(),
+                &mut timeval,
+            )
         };
 
         if rc == -1 {
@@ -106,14 +116,15 @@ impl SwitchMonitor {
             event
         };
         debug!("input event received: {:?}", event);
-        if event.event_type == 1 /*KEY*/ && event.code == 0x230/*KEY_ALS_TOGGLE*/ && event.value == 1 {
+        if event.event_type == 1 /*KEY*/ && event.code == 0x230/*KEY_ALS_TOGGLE*/ && event.value == 1
+        {
             self.state = match (self.state, self.is_max_brightness_mode_enabled) {
                 (State::Auto, _) => State::Off,
                 (State::Off, true) => State::Maximum,
                 (State::Off, false) => State::Auto,
                 (State::Maximum, _) => State::Auto,
             };
-            return (self.state, true)
+            return (self.state, true);
         }
         (self.state, false)
     }

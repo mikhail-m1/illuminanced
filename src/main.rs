@@ -1,25 +1,27 @@
 extern crate daemonize;
-extern crate syslog;
-extern crate simplelog;
 extern crate getopts;
-extern crate toml;
 extern crate glob;
 extern crate libc;
+extern crate simplelog;
+extern crate syslog;
+extern crate toml;
 #[macro_use]
 extern crate log;
-use std::io::prelude::*;
-use std::fs::{File, OpenOptions};
-use daemonize::Daemonize;
-use syslog::Facility;
-use simplelog::{WriteLogger, LogLevelFilter, Config as LoggerConfig, TermLogger};
-use kalman::Kalman;
 use config::Config;
+use daemonize::Daemonize;
 use getopts::Options;
+use kalman::Kalman;
+use simplelog::{
+    ColorChoice, Config as LoggerConfig, LevelFilter, TermLogger, TerminalMode, WriteLogger,
+};
 use std::env;
+use std::fs::{File, OpenOptions};
+use std::io::prelude::*;
+use syslog::Facility;
 
-mod kalman;
 mod config;
 mod discrete_value;
+mod kalman;
 mod switch_monitor;
 
 #[derive(Debug)]
@@ -31,20 +33,20 @@ impl LightConvertor {
     fn new(mut points: Vec<LightPoint>) -> Self {
         points.sort_by(|p1, p2| p1.illuminance.cmp(&p2.illuminance));
         if points[0].illuminance != 0 {
-            points.insert(0,
-                          LightPoint {
-                              illuminance: 0,
-                              light: 0,
-                          });
+            points.insert(
+                0,
+                LightPoint {
+                    illuminance: 0,
+                    light: 0,
+                },
+            );
         }
         debug!("Points: {:?}", points);
         LightConvertor { points: points }
     }
 
     fn get_light(&self, illuminance: u32) -> f32 {
-        match self.points
-            .iter()
-            .position(|p| illuminance < p.illuminance) {
+        match self.points.iter().position(|p| illuminance < p.illuminance) {
             None => self.points.last().unwrap().light as f32,
             Some(0) => self.points[0].light as f32,
             Some(right_index) => {
@@ -55,8 +57,9 @@ impl LightConvertor {
                 if diff == 0.0 {
                     left.light as f32
                 } else {
-                    (right.light - left.light) as f32 / diff *
-                    (illuminance - left.illuminance) as f32 + left.light as f32
+                    (right.light - left.light) as f32 / diff
+                        * (illuminance - left.illuminance) as f32
+                        + left.light as f32
                 }
             }
         }
@@ -96,31 +99,36 @@ fn write_u32_to_file(filename: &str, value: u32) -> std::io::Result<()> {
         })
 }
 
-fn main_loop(config: &Config,
-             light_convertor: &LightConvertor,
-             max_brightness: u32,
-             mut switch_monitor: switch_monitor::SwitchMonitor)
-             -> Result<(), ErrorCode> {
-    let mut kalman = Kalman::new(config.kalman_q(),
-                                 config.kalman_r(),
-                                 config.kalman_covariance());
-    let mut stepped_brightness = discrete_value::DiscreteValue::new(config.min_backlight(),
-                                                                    max_brightness,
-                                                                    config.light_steps(),
-                                                                    config.step_barrier());
+fn main_loop(
+    config: &Config,
+    light_convertor: &LightConvertor,
+    max_brightness: u32,
+    mut switch_monitor: switch_monitor::SwitchMonitor,
+    illuminance_filename: &str,
+) -> Result<(), ErrorCode> {
+    let mut kalman = Kalman::new(
+        config.kalman_q(),
+        config.kalman_r(),
+        config.kalman_covariance(),
+    );
+    let mut stepped_brightness = discrete_value::DiscreteValue::new(
+        config.min_backlight(),
+        max_brightness,
+        config.light_steps(),
+        config.step_barrier(),
+    );
     debug!("k: s:{:?}", stepped_brightness);
     loop {
-        match read_file_to_u32(config.illuminance_filename()) {
+        match read_file_to_u32(&illuminance_filename) {
             Some(illuminance) => {
                 let illuminance_k = kalman.process(illuminance as f32);
                 let brightness = light_convertor.get_light(illuminance_k as u32);
                 debug!("{}, {}, {}", illuminance, illuminance_k, brightness);
                 if let Some(new) = stepped_brightness.update(brightness) {
-                    info!("raw {}, kalman {}, new level {} new brightness {}",
-                          illuminance,
-                          illuminance_k,
-                          brightness,
-                          new);
+                    info!(
+                        "raw {}, kalman {}, new level {} new brightness {}",
+                        illuminance, illuminance_k, brightness, new
+                    );
                     set_brightness(config, new);
                 }
             }
@@ -138,7 +146,11 @@ fn set_brightness(config: &Config, value: u32) {
     }
 }
 
-fn try_process_switch(switch_monitor: &mut switch_monitor::SwitchMonitor, config: &Config, max_brightness: u32) -> bool {
+fn try_process_switch(
+    switch_monitor: &mut switch_monitor::SwitchMonitor,
+    config: &Config,
+    max_brightness: u32,
+) -> bool {
     let mut timeout = config.check_period_in_seconds();
     loop {
         match switch_monitor.wait_state_update(timeout) {
@@ -147,13 +159,13 @@ fn try_process_switch(switch_monitor: &mut switch_monitor::SwitchMonitor, config
                     info!("disabled by event, wait for enabling");
                 }
                 timeout = 3600;
-            },
+            }
             (switch_monitor::State::Auto, changed) => {
                 if changed {
                     info!("auto mode by event");
                 }
                 return changed;
-            },
+            }
             (switch_monitor::State::Maximum, changed) => {
                 if changed {
                     info!("maximum by event");
@@ -191,15 +203,11 @@ pub enum ErrorCode {
 }
 
 fn parse_config(config: &String) -> Result<toml::Table, ErrorCode> {
-    let mut config_parser = toml::Parser::new(&config);
-    config_parser.parse()
-        .ok_or_else(|| {
-            println!("Cannot parse config file:");
-            for ref e in config_parser.errors.iter() {
-                println!("{} at `{}`", e, &config[e.lo..e.hi]);
-            }
-            ErrorCode::ConfigParseError
-        })
+    let config_result = config.parse::<toml::Table>();
+    config_result.map_err(|e| {
+        println!("Cannot parse config file: {}", e.message());
+        ErrorCode::ConfigParseError
+    })
 }
 
 fn run() -> Result<(), ErrorCode> {
@@ -213,8 +221,6 @@ fn run() -> Result<(), ErrorCode> {
     opts.optflag("v", "version", "print version");
     opts.optflag("d", "no-fork", "no fork for debug");
     opts.optflag("h", "help", "print this help");
-    opts.optflag("k", "stop", "send SIGTERM signal");
-    // opts.optflag("r", "reload", "send SIGHUP signal");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -246,63 +252,84 @@ fn run() -> Result<(), ErrorCode> {
         Config::new(f.ok().and_then(|f| parse_config(&f).ok()))
     };
 
-    if matches.opt_present("stop") {
-        return Daemonize::new()
-            .pid_file(config.pid_filename())
-            .stop()
-            .map_err(|e| {
-                println!("Cannot stop: {}", e);
-                ErrorCode::DaemonizeErrror
-            });
-    }
-
-    if matches.opt_present("no-fork") {
-        let _ = TermLogger::init(LogLevelFilter::Debug, LoggerConfig::default());
+    if matches.opt_present("d") {
+        let _ = TermLogger::init(
+            LevelFilter::Debug,
+            LoggerConfig::default(),
+            TerminalMode::Stdout,
+            ColorChoice::Auto,
+        );
     } else {
         if matches.opt_present("log") || !config.log_to_syslog() {
-            let log_filename = matches.opt_str("log").unwrap_or(config.log_filename().to_string());
-            let log_file = OpenOptions::new().append(true)
+            let log_filename = matches
+                .opt_str("log")
+                .unwrap_or(config.log_filename().to_string());
+            let log_file = OpenOptions::new()
+                .append(true)
                 .create(true)
                 .open(&log_filename)
                 .map_err(|e| {
                     println!("Cannot open log file: `{}`, error: {}", log_filename, e);
                     ErrorCode::TracerCreateError
                 })?;
-            WriteLogger::init(config.log_level(), LoggerConfig::default(), log_file).map_err(|e| {
+            WriteLogger::init(config.log_level(), LoggerConfig::default(), log_file).map_err(
+                |e| {
                     println!("Cannot create logger: {}", e);
                     ErrorCode::TracerCreateError
-                })?;
+                },
+            )?;
         } else {
-            syslog::init(Facility::LOG_DAEMON,
-                         config.log_level(),
-                         Some("illuminanced")).map_err(|e| {
-                    println!("Cannot open syslog: {}", e);
-                    ErrorCode::SyslogOpenError
-                })?;
+            syslog::init(
+                Facility::LOG_DAEMON,
+                config.log_level(),
+                Some("illuminanced"),
+            )
+            .map_err(|e| {
+                println!("Cannot open syslog: {}", e);
+                ErrorCode::SyslogOpenError
+            })?;
         }
     }
 
     let light_points = config.light_points()?;
     let light_convertor = LightConvertor::new(light_points);
-    let max_brightness =
-        read_file_to_u32(config.max_backlight_filename()).ok_or(ErrorCode::ReadMaxBrightnessError)?;
-    read_file_to_u32(config.illuminance_filename()).ok_or_else(|| {
-            error!("Cannot read from {}", config.illuminance_filename());
-            ErrorCode::ReadIlluminanceError
-        })?;
+    let max_brightness = read_file_to_u32(config.max_backlight_filename())
+        .ok_or(ErrorCode::ReadMaxBrightnessError)?;
+
+    let illuminance_filename = match glob::glob(config.illuminance_filename()) {
+        Err(e) => {
+            error!("Cannot glob({}): {}", config.illuminance_filename(), e);
+            return Err(ErrorCode::ReadIlluminanceError);
+        }
+        Ok(mut paths) => paths
+            .next()
+            .ok_or(ErrorCode::ReadIlluminanceError)?
+            .map_err(|_| ErrorCode::ReadIlluminanceError)?
+            .to_str()
+            .unwrap()
+            .to_string(),
+    };
+    info!("Use `{illuminance_filename}` as illuminance input");
+    read_file_to_u32(&illuminance_filename).ok_or_else(|| {
+        error!("Cannot read from {illuminance_filename}");
+        ErrorCode::ReadIlluminanceError
+    })?;
     let brightness = read_file_to_u32(config.backlight_filename()).ok_or_else(|| {
-            error!("Cannot read from {}", config.backlight_filename());
-            ErrorCode::ReadBacklightError
-        })?;
+        error!("Cannot read from {}", config.backlight_filename());
+        ErrorCode::ReadBacklightError
+    })?;
     write_u32_to_file(config.backlight_filename(), brightness)
         .map_err(|_| ErrorCode::CannotSetBacklight)?;
 
-    let switch_monitor = switch_monitor::SwitchMonitor::new(config.event_device_mask(),
-                                                            config.event_device_name(),
-                                                            config.is_max_brightness_mode());
+    let switch_monitor = switch_monitor::SwitchMonitor::new(
+        config.event_device_mask(),
+        config.event_device_name(),
+        config.is_max_brightness_mode(),
+    );
 
     if !matches.opt_present("no-fork") {
-        Daemonize::new().pid_file(config.pid_filename())
+        Daemonize::new()
+            .pid_file(config.pid_filename())
             .start()
             .map_err(|e| {
                 error!("Cannot daemonize: {}", e);
@@ -310,7 +337,13 @@ fn run() -> Result<(), ErrorCode> {
             })?;
     }
 
-    main_loop(&config, &light_convertor, max_brightness, switch_monitor)
+    main_loop(
+        &config,
+        &light_convertor,
+        max_brightness,
+        switch_monitor,
+        &illuminance_filename,
+    )
 }
 
 fn main() {
