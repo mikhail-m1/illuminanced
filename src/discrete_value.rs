@@ -1,8 +1,7 @@
-
 #[derive(Debug)]
 pub struct DiscreteValue {
     min: u32,
-    max: u32,
+    _max: u32,
     step_size: f32,
     barrier: f32,
     last_level: u32,
@@ -12,7 +11,7 @@ impl DiscreteValue {
     pub fn new(min: u32, max: u32, steps_count: u32, barrier: f32) -> Self {
         DiscreteValue {
             min: min,
-            max: max,
+            _max: max,
             step_size: (max - min) as f32 / (steps_count - 1) as f32,
             barrier: barrier,
             last_level: 0,
@@ -33,7 +32,7 @@ impl DiscreteValue {
 
 #[test]
 fn discrete_value_change() {
-    use simplelog::{LogLevelFilter, Config as LoggerConfig, TermLogger};
+    use simplelog::{Config as LoggerConfig, LogLevelFilter, TermLogger};
     let _ = TermLogger::init(LogLevelFilter::Debug, LoggerConfig::default());
     let mut v = DiscreteValue::new(10, 100, 10, 0.1);
     assert_eq!(v.update(0.0), None);
