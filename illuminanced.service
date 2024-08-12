@@ -6,7 +6,7 @@ Documentation=https://github.com/mikhail-m1/illuminanced
 [Service]
 Type=forking
 ExecStart=/usr/local/sbin/illuminanced
-PIDFile=/var/run/illuminanced.pid
+PIDFile=/run/illuminanced.pid
 Restart=on-failure
 
 [Install]

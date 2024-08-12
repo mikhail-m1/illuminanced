@@ -1,7 +1,7 @@
 [daemonize]
 # log_to = "syslog" or /file/path
 log_to = "syslog"
-pid_file = "/var/run/illuminanced.pid"
+pid_file = "/run/illuminanced.pid"
 # log_level = "OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"
 log_level = "ERROR"
 

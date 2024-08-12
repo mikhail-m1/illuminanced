@@ -31,7 +31,7 @@ impl Config {
 
     pub fn pid_filename(&self) -> &str {
         self.get_str("daemonize", "pid_file")
-            .unwrap_or("/var/run/illuminanced.pid")
+            .unwrap_or("/run/illuminanced.pid")
     }
 
     pub fn light_steps(&self) -> u32 {
