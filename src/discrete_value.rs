@@ -1,3 +1,5 @@
+use simplelog::{ColorChoice, TerminalMode};
+
 #[derive(Debug)]
 pub struct DiscreteValue {
     min: u32,
@@ -32,8 +34,13 @@ impl DiscreteValue {
 
 #[test]
 fn discrete_value_change() {
-    use simplelog::{Config as LoggerConfig, LogLevelFilter, TermLogger};
-    let _ = TermLogger::init(LogLevelFilter::Debug, LoggerConfig::default());
+    use simplelog::{Config as LoggerConfig, LevelFilter, TermLogger};
+    let _ = TermLogger::init(
+        LevelFilter::Debug,
+        LoggerConfig::default(),
+        TerminalMode::Stdout,
+        ColorChoice::Auto,
+    );
     let mut v = DiscreteValue::new(10, 100, 10, 0.1);
     assert_eq!(v.update(0.0), None);
     assert_eq!(v.update(1.09), None);
