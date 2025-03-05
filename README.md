@@ -1,10 +1,15 @@
-# Ambient Light Sensor Daemon For Linux
-A user mode daemon for automatically changing brightness based on light sensor value designed for modern laptops. Not all devices might be supported.
+# Ambient Light Sensor Daemon for Linux
+A user-space daemon that automatically adjusts screen brightness based on light sensor readings.
 
-## How to test befor install
-Run from a terminal `sudo watch cat /sys/bus/acpi/devices/ACPI0008\:00/iio\:device0/in_illuminance_raw` and check that number is changing (try close the sensor or add more light). If the number is still the same it means the sensor driver doesn't work. If you see file not found error try to find correct path for `in_illuminance_raw` inside `/sys/bus/acpi/devices/`.
+## Testing Before Installation
 
-For ZBook 15 G6, Framework laptops, and may be others, the sensor path is `/sys/bus/iio/devices/iio:device0/in_illuminance_raw`. So try `sudo watch cat /sys/bus/iio/devices/iio:device0/in_illuminance_raw` and change the config if it works for you.
+First, identify the light sensor device path, try to run from a terminal `find /sys/bus -name in_illuminance_raw`. In some cases the device name can be significantly different, try to broaden the search: `find /sys/bus -name '*illuminance*'`. When you have found a device, check that it works, for example:
+`sudo watch cat /sys/bus/acpi/devices/ACPI0008\:00/iio\:device0/in_illuminance_raw`. The readings should be changing (try closing the sensor or add more light). If the number is still the same it means the sensor driver doesn't work properly.
+
+For ZBook 15 G6, Framework laptops, and maybe others, the sensor path is `/sys/bus/iio/devices/iio:device0/in_illuminance_raw`.
+
+You need to put the device path to the config before starting the daemon.
+On some laptops, the device name can be different after each reboot, you can use `*` in the device path in the config.
 
 ## Supported laptops
 
@@ -19,47 +24,28 @@ Also works on Framework laptops:
 * Framework 13 AMD
 * Framework 16 AMD
 
-On Dell Inspiron 13 7353, need to change driver path and brightness levels.
-
-Some times works (base on responses)
-* UX303UA
-* UX305CA with [als driver](https://github.com/danieleds/als)
-* UX430UQ Ubuntu with build in driver acpi-als, an extra ACPI call to enable the sensor `(_SB.PCI1.LPCB.EC0.ALSC)`
-* UX410UQ
-
-Doesn't work on Zenbooks because of driver issue:
-* UX303LN
-* UX305UA
-* UX31A
-* UX32LN
-
-Something wrong with Arch Linux may be related with syslog, a pull request is appreciated
-
-Please fill [a response form](https://drive.google.com/open?id=1mjr_R3nXBFAeObI7zB7BPD_EpSvTTpOf_H67x-HE2qo), it may helps other users
-
-Keyboard back light is not adjust because my laptop doesn't have it. Want to help? Create an issue.
-
-## Install package (experimental)
-
-Finally I found time to create [deb package](https://drive.google.com/file/d/1bGBXRmiMMWeg6JIsV2SuZQ2RPYvezSbE/view)
+## Install deb package
+Download the deb package from the last release.
 
 To install and start run next commands after download:
 ```
 sudo dpkg -i ~/Download/illuminanced_1.0-0.deb
+# change config if device path is different
 sudo systemctl enable illuminanced.service
 sudo systemctl start illuminanced.service
 ```
 
 You can check status by running `systemctl status illuminanced.service`
 
-
-Please open an issue if it doesn't work.
-
-## How to build & install
+## Build & install
 * install Rust: `curl https://sh.rustup.rs -sSf | sh`
 * clone : `git clone https://github.com/mikhail-m1/illuminanced.git`
 * build: `cd illuminanced; cargo build --release`
+* change device path if needed
 * install `sudo ./install.sh`
+
+## Troubleshooting
+If the service fails to start, try to run it in foreground mode to see what is wrong: `sudo /usr/local/sbin/illuminanced -d`.
 
 ## How to Adjust
 * open a config file `/usr/local/etc/illuminanced.toml` (Default)
@@ -68,14 +54,13 @@ Please open an issue if it doesn't work.
 * set each point by `illuminance_<n>` and `light_<n> where` illuminance from `in_illuminance_raw` (see below) and light in range `[0..light_steps)`
 
 ## How it works
-Reads illuminance from `/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw`, apply Kalman like filter, set back light value base on defined points.
-Unfortunately I cannot find a way how get events from [iio buffers](https://www.kernel.org/doc/htmldocs/iio/iiobuffer.html), for acpi-als driver, so now it polls.
+The daemon reads illuminance from `/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw`, applies Kalman-like filter, set backlight value based on defined points.
+Unfortunately, I cannot find a way how to get events from [iio buffers](https://www.kernel.org/doc/htmldocs/iio/iiobuffer.html), for acpi-als driver, so the daemon check the value every second.
 
 ## `<Fn> + A`
+My laptop has a special key to control brightness, which sends `KEY_ALS_TOGGLE		0x230	/* Ambient light sensor */` code. There is an open ticket about making it configurable, but I am not sure what is a good replacement, you can add your opinion.
+
 Switches three modes:
 - Auto adjust
 - Disabled
 - Max brightness (useful for movies, can be disabled by config file `/usr/local/etc/illuminanced.toml`)
-
-## Contribution
-Any feedback are welcome

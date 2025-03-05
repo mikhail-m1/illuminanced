@@ -1,6 +1,6 @@
 [Unit]
 Description=Ambient light monitoring Service
-Requires=syslog.socket
+Wants=syslog.socket
 Documentation=https://github.com/mikhail-m1/illuminanced
 
 [Service]
