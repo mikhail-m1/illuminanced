@@ -1,8 +1,7 @@
+use crate::ErrorCode;
+use crate::LightPoint;
 use log::LevelFilter;
 use std::str::FromStr;
-use toml;
-use ErrorCode;
-use LightPoint;
 
 pub struct Config {
     table: Option<toml::Table>,
@@ -10,12 +9,12 @@ pub struct Config {
 
 impl Config {
     pub fn new(table: Option<toml::Table>) -> Self {
-        Config { table: table }
+        Config { table }
     }
 
     pub fn log_to_syslog(&self) -> bool {
         self.get_str("daemonize", "log_to")
-            .map_or(true, |v| v == "syslog")
+            .is_none_or(|v| v == "syslog")
     }
 
     pub fn log_filename(&self) -> &str {
@@ -107,13 +106,13 @@ impl Config {
                         self.get_u32("light", &format!("light_{}", i))
                             .map(|light| LightPoint {
                                 illuminance: ill,
-                                light: light,
+                                light,
                             })
                     })
             })
             .collect();
 
-        if points.iter().any(|ref p| p.is_none()) {
+        if points.iter().any(|p| p.is_none()) {
             Err(ErrorCode::InvalidPointsInConfig)
         } else {
             Ok(points.into_iter().map(|x| x.unwrap()).collect())
@@ -128,9 +127,7 @@ impl Config {
     }
 
     fn get_table_val(&self, table_name: &str, name: &str) -> Option<&toml::Value> {
-        if self.table.is_none() {
-            return None;
-        }
+        self.table.as_ref()?;
         let v = self
             .table
             .as_ref()
@@ -164,6 +161,5 @@ impl Config {
     fn get_bool(&self, table_name: &str, name: &str) -> Option<bool> {
         self.get_table_val(table_name, name)
             .and_then(|v| v.as_bool())
-            .map(|i| i as bool)
     }
 }

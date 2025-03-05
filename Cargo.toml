@@ -2,6 +2,7 @@
 name = "illuminanced"
 version = "0.1.1"
 authors = ["Mikhail Modin <mikhailm1@gmail.com>"]
+edition = "2021"
 
 [dependencies]
 daemonize = "0.5"

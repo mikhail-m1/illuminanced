@@ -1,6 +1,4 @@
 use glob::glob;
-use libc;
-use std;
 use std::io::Read;
 use std::os::unix::io::AsRawFd;
 use std::{fs, io, mem};
@@ -31,6 +29,7 @@ impl SwitchMonitor {
                             Ok(fd) => {
                                 let mut buffer = [0u8; 256];
                                 let rc = unsafe {
+                                    #[allow(clippy::unusual_byte_groupings)]
                                     libc::ioctl(fd.as_raw_fd(), 0x8_100_45_06, &mut buffer)
                                 };
                                 if rc == -1 {

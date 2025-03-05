@@ -42,7 +42,7 @@ impl LightConvertor {
             );
         }
         debug!("Points: {:?}", points);
-        LightConvertor { points: points }
+        LightConvertor { points }
     }
 
     fn get_light(&self, illuminance: u32) -> f32 {
@@ -119,7 +119,7 @@ fn main_loop(
     );
     debug!("k: s:{:?}", stepped_brightness);
     loop {
-        match read_file_to_u32(&illuminance_filename) {
+        match read_file_to_u32(illuminance_filename) {
             Some(illuminance) => {
                 let illuminance_k = kalman.process(illuminance as f32);
                 let brightness = light_convertor.get_light(illuminance_k as u32);
@@ -134,7 +134,7 @@ fn main_loop(
             }
             _ => error!("Cannot read illuminance"),
         }
-        if try_process_switch(&mut switch_monitor, &config, max_brightness) {
+        if try_process_switch(&mut switch_monitor, config, max_brightness) {
             stepped_brightness.update(config.light_steps() as f32);
         }
     }
@@ -202,7 +202,7 @@ pub enum ErrorCode {
     SyslogOpenError,
 }
 
-fn parse_config(config: &String) -> Result<toml::Table, ErrorCode> {
+fn parse_config(config: &str) -> Result<toml::Table, ErrorCode> {
     let config_result = config.parse::<toml::Table>();
     config_result.map_err(|e| {
         println!("Cannot parse config file: {}", e.message());
@@ -245,7 +245,7 @@ fn run() -> Result<(), ErrorCode> {
         Config::new(parse_config(&f.unwrap()).ok())
     } else {
         let default = "/usr/local/etc/illuminanced.toml";
-        let f = read_file_to_string(&default);
+        let f = read_file_to_string(default);
         if let Err(ref e) = f {
             println!("Cannot open config file `{}`: {}, ignore", default, e);
         }
@@ -259,36 +259,32 @@ fn run() -> Result<(), ErrorCode> {
             TerminalMode::Stdout,
             ColorChoice::Auto,
         );
-    } else {
-        if matches.opt_present("log") || !config.log_to_syslog() {
-            let log_filename = matches
-                .opt_str("log")
-                .unwrap_or(config.log_filename().to_string());
-            let log_file = OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(&log_filename)
-                .map_err(|e| {
-                    println!("Cannot open log file: `{}`, error: {}", log_filename, e);
-                    ErrorCode::TracerCreateError
-                })?;
-            WriteLogger::init(config.log_level(), LoggerConfig::default(), log_file).map_err(
-                |e| {
-                    println!("Cannot create logger: {}", e);
-                    ErrorCode::TracerCreateError
-                },
-            )?;
-        } else {
-            syslog::init(
-                Facility::LOG_DAEMON,
-                config.log_level(),
-                Some("illuminanced"),
-            )
+    } else if matches.opt_present("log") || !config.log_to_syslog() {
+        let log_filename = matches
+            .opt_str("log")
+            .unwrap_or(config.log_filename().to_string());
+        let log_file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(&log_filename)
             .map_err(|e| {
-                println!("Cannot open syslog: {}", e);
-                ErrorCode::SyslogOpenError
+                println!("Cannot open log file: `{}`, error: {}", log_filename, e);
+                ErrorCode::TracerCreateError
             })?;
-        }
+        WriteLogger::init(config.log_level(), LoggerConfig::default(), log_file).map_err(|e| {
+            println!("Cannot create logger: {}", e);
+            ErrorCode::TracerCreateError
+        })?;
+    } else {
+        syslog::init(
+            Facility::LOG_DAEMON,
+            config.log_level(),
+            Some("illuminanced"),
+        )
+        .map_err(|e| {
+            println!("Cannot open syslog: {}", e);
+            ErrorCode::SyslogOpenError
+        })?;
     }
 
     let light_points = config.light_points()?;

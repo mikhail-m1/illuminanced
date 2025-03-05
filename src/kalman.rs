@@ -8,10 +8,10 @@ pub struct Kalman {
 impl Kalman {
     pub fn new(q: f32, r: f32, covariance: f32) -> Kalman {
         Kalman {
-            q: q,
-            r: r,
+            q,
+            r,
             value: None,
-            covariance: covariance,
+            covariance,
         }
     }
     pub fn process(&mut self, input: f32) -> f32 {

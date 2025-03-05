@@ -1,4 +1,3 @@
-use simplelog::{ColorChoice, TerminalMode};
 
 #[derive(Debug)]
 pub struct DiscreteValue {
@@ -12,10 +11,10 @@ pub struct DiscreteValue {
 impl DiscreteValue {
     pub fn new(min: u32, max: u32, steps_count: u32, barrier: f32) -> Self {
         DiscreteValue {
-            min: min,
+            min,
             _max: max,
             step_size: (max - min) as f32 / (steps_count - 1) as f32,
-            barrier: barrier,
+            barrier,
             last_level: 0,
         }
     }
