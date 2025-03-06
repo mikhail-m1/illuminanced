@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub struct DiscreteValue {
     min: u32,
@@ -37,8 +36,8 @@ fn discrete_value_change() {
     let _ = TermLogger::init(
         LevelFilter::Debug,
         LoggerConfig::default(),
-        TerminalMode::Stdout,
-        ColorChoice::Auto,
+        simplelog::TerminalMode::Stdout,
+        simplelog::ColorChoice::Auto,
     );
     let mut v = DiscreteValue::new(10, 100, 10, 0.1);
     assert_eq!(v.update(0.0), None);

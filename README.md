@@ -25,7 +25,7 @@ Also works on Framework laptops:
 * Framework 16 AMD
 
 ## Install deb package
-Download the deb package from the last release.
+Download the deb package from [the last release](https://github.com/mikhail-m1/illuminanced/releases).
 
 To install and start run next commands after download:
 ```
@@ -60,7 +60,7 @@ Unfortunately, I cannot find a way how to get events from [iio buffers](https://
 ## `<Fn> + A`
 My laptop has a special key to control brightness, which sends `KEY_ALS_TOGGLE		0x230	/* Ambient light sensor */` code. There is an open ticket about making it configurable, but I am not sure what is a good replacement, you can add your opinion.
 
-Switches three modes:
+The key switches between next three modes:
 - Auto adjust
 - Disabled
 - Max brightness (useful for movies, can be disabled by config file `/usr/local/etc/illuminanced.toml`)
