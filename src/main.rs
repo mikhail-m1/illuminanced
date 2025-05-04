@@ -321,6 +321,7 @@ fn run() -> Result<(), ErrorCode> {
         config.event_device_mask(),
         config.event_device_name(),
         config.is_max_brightness_mode(),
+        config.switch_key_code(),
     );
 
     if !matches.opt_present("no-fork") {

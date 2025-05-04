@@ -126,6 +126,11 @@ impl Config {
         }]
     }
 
+    pub fn switch_key_code(&self) -> u16 {
+        self.get_u32("general", "switch_key_code")
+            .unwrap_or(0x230/*KEY_ALS_TOGGLE*/) as u16
+    }
+
     fn get_table_val(&self, table_name: &str, name: &str) -> Option<&toml::Value> {
         self.table.as_ref()?;
         let v = self

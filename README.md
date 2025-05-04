@@ -57,8 +57,8 @@ If the service fails to start, try to run it in foreground mode to see what is w
 The daemon reads illuminance from `/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw`, applies Kalman-like filter, set backlight value based on defined points.
 Unfortunately, I cannot find a way how to get events from [iio buffers](https://www.kernel.org/doc/htmldocs/iio/iiobuffer.html), for acpi-als driver, so the daemon check the value every second.
 
-## `<Fn> + A`
-My laptop has a special key to control brightness, which sends `KEY_ALS_TOGGLE		0x230	/* Ambient light sensor */` code. There is an open ticket about making it configurable, but I am not sure what is a good replacement, you can add your opinion.
+## Switch modes
+My laptop has a special key to control brightness, which sends `KEY_ALS_TOGGLE		0x230	/* Ambient light sensor */` code. The daemon monitors it to switch between different modes. You can redefine the key by changing `event_device_name` and `switch_key_code`. `showkey` and `evtest` can help to find the code and device name.
 
 The key switches between next three modes:
 - Auto adjust

@@ -7,6 +7,7 @@ pub struct SwitchMonitor {
     fd: Option<fs::File>,
     state: State,
     is_max_brightness_mode_enabled: bool,
+    switch_key_code: u16,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -17,7 +18,7 @@ pub enum State {
 }
 
 impl SwitchMonitor {
-    pub fn new(dev_mask: &str, dev_name: &str, is_max_brightness_mode_enabled: bool) -> Self {
+    pub fn new(dev_mask: &str, dev_name: &str, is_max_brightness_mode_enabled: bool, switch_key_code: u16) -> Self {
         match glob(dev_mask) {
             Err(e) => error!("Cannot glob({}): {}", dev_mask, e),
             Ok(dir) => {
@@ -47,6 +48,7 @@ impl SwitchMonitor {
                                             fd: Some(fd),
                                             state: State::Auto,
                                             is_max_brightness_mode_enabled,
+                                            switch_key_code,
                                         };
                                     }
                                 }
@@ -60,6 +62,7 @@ impl SwitchMonitor {
             fd: None,
             state: State::Auto,
             is_max_brightness_mode_enabled,
+            switch_key_code,
         }
     }
 
@@ -115,7 +118,7 @@ impl SwitchMonitor {
             event
         };
         debug!("input event received: {:?}", event);
-        if event.event_type == 1 /*KEY*/ && event.code == 0x230/*KEY_ALS_TOGGLE*/ && event.value == 1
+        if event.event_type == 1 /*KEY*/ && event.code == self.switch_key_code && event.value == 1
         {
             self.state = match (self.state, self.is_max_brightness_mode_enabled) {
                 (State::Auto, _) => State::Off,

@@ -14,9 +14,13 @@ max_backlight_file = "/sys/class/backlight/intel_backlight/max_brightness"
 backlight_file = "/sys/class/backlight/intel_backlight/brightness"
 illuminance_file = "/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw"
 event_device_mask = "/dev/input/event*"
+# use `sudo evtest` to see devices and provided keycodes in hex
 event_device_name = "Asus WMI hotkeys"
 enable_max_brightness_mode = true
 filename_for_sensor_activation = ""
+# use `sudo showkey` to find the key code
+# use 0xXXX for hex value
+switch_key_code = 560 #  KEY_ALS_TOGGLE
 
 [kalman]
 q = 1
