@@ -1,3 +1,4 @@
+use crate::brightness_transition::BrightnessTransition;
 use crate::ErrorCode;
 use crate::LightPoint;
 use log::LevelFilter;
@@ -90,6 +91,22 @@ impl Config {
     pub fn illuminance_filename(&self) -> &str {
         self.get_str("general", "illuminance_file")
             .unwrap_or("/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw")
+    }
+
+    pub fn backlight_transition(&self) -> BrightnessTransition {
+        self.get_str("general", "backlight_transition")
+            .and_then(|s| BrightnessTransition::from_str(s))
+            .unwrap_or(BrightnessTransition::Instant)
+    }
+
+    pub fn backlight_transition_step_count(&self) -> u32 {
+        self.get_u32("general", "backlight_transition_step_count")
+            .unwrap_or(20)
+    }
+
+    pub fn backlight_transition_time_seconds(&self) -> u32 {
+        self.get_u32("general", "backlight_transition_time_seconds")
+            .unwrap_or(1)
     }
 
     pub fn light_points(&self) -> Result<Vec<LightPoint>, ErrorCode> {
