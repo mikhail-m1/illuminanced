@@ -5,6 +5,9 @@ pid_file = "/run/illuminanced.pid"
 # log_level = "OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"
 log_level = "ERROR"
 
+# https://github.com/mikhail-m1/illuminanced/issues/12
+# Backlight brightness levels are remapped from
+# [min_backlight, max_backlight_file] to [0, light_steps]
 [general]
 check_period_in_seconds = 1
 light_steps = 10
@@ -28,9 +31,14 @@ r = 20
 covariance = 10
 
 [light]
+# Number of illuminance_n points below
 points_count = 6
 
+# Each illuminance_n value is a value from illuminance_file indicating
+# the ambient light levels.  0 means the darkest environment.
 illuminance_0 = 0
+# Each light_n value represents the normalised backlight brightness
+# in the range [0, light_steps]
 light_0 = 0
 
 illuminance_1 = 20

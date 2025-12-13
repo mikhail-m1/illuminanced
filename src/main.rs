@@ -12,7 +12,7 @@ use daemonize::Daemonize;
 use getopts::Options;
 use kalman::Kalman;
 use simplelog::{
-    ColorChoice, Config as LoggerConfig, LevelFilter, TermLogger, TerminalMode, WriteLogger,
+    ColorChoice, Config as LoggerConfig, LevelFilter, SimpleLogger, TermLogger, TerminalMode, WriteLogger,
 };
 use std::env;
 use std::fs::{File, OpenOptions};
@@ -41,7 +41,7 @@ impl LightConvertor {
                 },
             );
         }
-        debug!("Points: {:?}", points);
+        debug!("light conversion points (illuminance -> brightness level): {:?}", points);
         LightConvertor { points }
     }
 
@@ -50,7 +50,7 @@ impl LightConvertor {
             None => self.points.last().unwrap().light as f32,
             Some(0) => self.points[0].light as f32,
             Some(right_index) => {
-                debug!("right index: {}", right_index);
+                trace!("light conversion using points index: {}", right_index);
                 let left = &self.points[right_index - 1];
                 let right = &self.points[right_index];
                 let diff = (right.illuminance - left.illuminance) as f32;
@@ -117,16 +117,17 @@ fn main_loop(
         config.light_steps(),
         config.step_barrier(),
     );
-    debug!("k: s:{:?}", stepped_brightness);
+    debug!("initialized DiscreteValue: {:?}", stepped_brightness);
     loop {
         match read_file_to_u32(illuminance_filename) {
             Some(illuminance) => {
                 let illuminance_k = kalman.process(illuminance as f32);
                 let brightness = light_convertor.get_light(illuminance_k as u32);
-                debug!("{}, {}, {}", illuminance, illuminance_k, brightness);
+                trace!("ambient light: raw={} kalman={:.1} -> brightness level={:.2}",
+                       illuminance, illuminance_k, brightness);
                 if let Some(new) = stepped_brightness.update(brightness) {
                     info!(
-                        "raw {}, kalman {}, new level {} new brightness {}",
+                        "BRIGHTNESS CHANGED: ambient light raw={} kalman={:.1} -> level={:.2} -> hardware brightness={}",
                         illuminance, illuminance_k, brightness, new
                     );
                     set_brightness(config, new);
@@ -253,12 +254,18 @@ fn run() -> Result<(), ErrorCode> {
     };
 
     if matches.opt_present("d") {
-        let _ = TermLogger::init(
+        if TermLogger::init(
             LevelFilter::Debug,
             LoggerConfig::default(),
             TerminalMode::Stdout,
             ColorChoice::Auto,
-        );
+        ).is_err() {
+            SimpleLogger::init(LevelFilter::Debug, LoggerConfig::default())
+                .map_err(|e| {
+                    eprintln!("Cannot initialize logger: {}", e);
+                    ErrorCode::TracerCreateError
+                })?;
+        }
     } else if matches.opt_present("log") || !config.log_to_syslog() {
         let log_filename = matches
             .opt_str("log")

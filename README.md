@@ -54,8 +54,30 @@ If the service fails to start, try to run it in foreground mode to see what is w
 * set each point by `illuminance_<n>` and `light_<n> where` illuminance from `in_illuminance_raw` (see below) and light in range `[0..light_steps)`
 
 ## How it works
-The daemon reads illuminance from `/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw`, applies Kalman-like filter, set backlight value based on defined points.
-Unfortunately, I cannot find a way how to get events from [iio buffers](https://www.kernel.org/doc/htmldocs/iio/iiobuffer.html), for acpi-als driver, so the daemon check the value every second.
+The daemon reads illuminance from `/sys/bus/acpi/devices/ACPI0008:00/iio:device0/in_illuminance_raw`, applies a Kalman filter for noise reduction, and sets backlight brightness based on configured light points.
+
+The process flow:
+1. **Sensor reading**: Raw illuminance value from the ambient light sensor
+2. **Kalman filtering**: Smooths out sensor noise to prevent brightness flickering
+3. **Light conversion**: Maps illuminance to a normalized brightness level (0 to `light_steps`)
+4. **Discrete steps**: Converts normalized level to hardware brightness value with hysteresis to prevent rapid changes
+5. **Hardware update**: Writes the final brightness value to the backlight device
+
+### Kalman Filter
+The Kalman filter prevents brightness flickering caused by noisy sensor readings. Even when ambient light is stable, sensors often produce fluctuating values (e.g., 28, 31, 29, 32...). The filter maintains a smoothed estimate by:
+- Weighing new measurements against the current estimate
+- Adjusting gradually rather than jumping to every reading
+- Using configurable parameters in `[kalman]` section:
+  - `q`: Process noise (how much the true value can change)
+  - `r`: Measurement noise (how noisy the sensor is - higher values = more smoothing)
+  - `covariance`: Initial uncertainty estimate
+
+### Anti-flicker Protection
+In addition to Kalman filtering, the daemon uses two mechanisms to prevent brightness changes from small variations:
+- **Barrier threshold**: Changes must exceed `step_barrier` (default 0.1) to trigger an update
+- **Discrete steps**: Brightness is quantized into `light_steps` discrete levels rather than continuous adjustment
+
+Unfortunately, I cannot find a way how to get events from [iio buffers](https://www.kernel.org/doc/htmldocs/iio/iiobuffer.html), for acpi-als driver, so the daemon checks the value every second.
 
 ## Switch modes
 My laptop has a special key to control brightness, which sends `KEY_ALS_TOGGLE		0x230	/* Ambient light sensor */` code. The daemon monitors it to switch between different modes. You can redefine the key by changing `event_device_name` and `switch_key_code`. `showkey` and `evtest` can help to find the code and device name.
