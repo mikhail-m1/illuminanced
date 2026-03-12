@@ -219,7 +219,8 @@ fn run() -> Result<(), ErrorCode> {
     opts.optopt("p", "pid", "set pid file", "filename");
     opts.optopt("c", "config", "config file", "filename");
     opts.optflag("v", "version", "print version");
-    opts.optflag("d", "no-fork", "no fork for debug");
+    opts.optflag("d", "debug", "no fork and debug logging");
+    opts.optflag("", "no-fork", "no fork for debug");
     opts.optflag("h", "help", "print this help");
 
     let matches = match opts.parse(&args[1..]) {
@@ -324,7 +325,7 @@ fn run() -> Result<(), ErrorCode> {
         config.switch_key_code(),
     );
 
-    if !matches.opt_present("no-fork") {
+    if !matches.opt_present("no-fork") && !matches.opt_present("debug") {
         Daemonize::new()
             .pid_file(config.pid_filename())
             .start()
