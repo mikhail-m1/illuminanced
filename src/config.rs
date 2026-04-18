@@ -99,11 +99,13 @@ impl Config {
         let count = self
             .get_u32("light", "points_count")
             .ok_or(ErrorCode::InvalidPointsInConfig)?;
+        let max_light = self.light_steps() - 1;
         let points: Vec<_> = (0..count)
             .map(|i| {
                 self.get_u32("light", &format!("illuminance_{}", i))
                     .and_then(|ill| {
                         self.get_u32("light", &format!("light_{}", i))
+                            .filter(|light| *light <= max_light)
                             .map(|light| LightPoint {
                                 illuminance: ill,
                                 light,
